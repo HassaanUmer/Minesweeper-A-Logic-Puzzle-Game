@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Minesweeper</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+
+  #game {
+    display: grid;
+    grid-template-columns: repeat(10, 40px);
+    gap: 4px;
+  }
+
+  .cell {
+    width: 40px;
+    height: 40px;
+    background: #334155;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .cell.revealed {
+    background: #cbd5f5;
+    color: black;
+    cursor: default;
+  }
+
+  .cell.mine {
+    background: #ef4444;
+  }
+
+  .cell.flag {
+    background: #facc15;
+    color: black;
+  }
+</style>
+</head>
+<body>
+
+<div id="game"></div>
+
+<script>
+const SIZE = 10;
+const MINES = 15;
+const game = document.getElementById("game");
+
+let board = [];
+let revealed = 0;
+let gameOver = false;
+
+// Create board
+for (let i = 0; i < SIZE * SIZE; i++) {
+  board.push({
+    mine: false,
+    count: 0,
+    revealed: false,
+    flag: false
+  });
+}
+
+// Place mines
+let placed = 0;
+while (placed < MINES) {
+  let i = Math.floor(Math.random() * board.length);
+  if (!board[i].mine) {
+    board[i].mine = true;
+    placed++;
+  }
+}
+
+// Calculate numbers
+for (let i = 0; i < board.length; i++) {
+  if (board[i].mine) continue;
+  let neighbors = getNeighbors(i);
+  board[i].count = neighbors.filter(n => board[n].mine).length;
+}
+
+// Create UI
+board.forEach((_, i) => {
+  const cell = document.createElement("div");
+  cell.className = "cell";
+
+  cell.onclick = () => reveal(i, cell);
+  cell.oncontextmenu = e => {
+    e.preventDefault();
+    toggleFlag(i, cell);
+  };
+
+  game.appendChild(cell);
+});
+
+function getNeighbors(i) {
+  const x = i % SIZE;
+  const y = Math.floor(i / SIZE);
+  let neighbors = [];
+
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      if (dx === 0 && dy === 0) continue;
+      let nx = x + dx;
+      let ny = y + dy;
+      if (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE) {
+        neighbors.push(ny * SIZE + nx);
+      }
+    }
+  }
+  return neighbors;
+}
+
+function reveal(i, cell) {
+  if (gameOver || board[i].revealed || board[i].flag) return;
+
+  board[i].revealed = true;
+  cell.classList.add("revealed");
+
+  if (board[i].mine) {
+    cell.classList.add("mine");
+    cell.textContent = "💣";
+    endGame(false);
+    return;
+  }
+
+  revealed++;
+  if (board[i].count > 0) {
+    cell.textContent = board[i].count;
+  } else {
+    getNeighbors(i).forEach(n => {
+      reveal(n, game.children[n]);
+    });
+  }
+
+  if (revealed === SIZE * SIZE - MINES) {
+    endGame(true);
+  }
+}
+
+function toggleFlag(i, cell) {
+  if (board[i].revealed || gameOver) return;
+  board[i].flag = !board[i].flag;
+  cell.classList.toggle("flag");
+  cell.textContent = board[i].flag ? "🚩" : "";
+}
+
+function endGame(win) {
+  gameOver = true;
+  board.forEach((cell, i) => {
+    if (cell.mine) {
+      game.children[i].textContent = "💣";
+      game.children[i].classList.add("mine");
+    }
+  });
+  setTimeout(() => alert(win ? "You win!" : "Game over!"), 100);
+}
+</script>
+
+</body>
+</html>
